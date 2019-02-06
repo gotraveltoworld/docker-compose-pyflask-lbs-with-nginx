@@ -1,0 +1,76 @@
+version: '3.7'
+services:
+  app1:
+      container_name: app1-container
+      hostname: app1
+      restart: always
+      build:
+        context: ./app
+        dockerfile: Dockerfile
+        args:
+          - PYTHON_VERSION=${PYTHON_VERSION}
+          - AUTHOR=${AUTHOR}
+          - CONTAINER_LOGFILE_PATH=${CONTAINER_LOGFILE_PATH}
+      volumes:
+        - socket_app1:${SOCKET_PATH} # Share the socket file for Nginx.
+        - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}
+        - ${LOCAL_LOGFILE_PATH}:${CONTAINER_LOGFILE_PATH}
+      environment:
+        - NODE_NAME=${NODE_NAME1}
+        - CONTAINER_LOGFILE_PATH=${CONTAINER_LOGFILE_PATH}
+        - APP_CODE_PATH_CONTAINER=${APP_CODE_PATH_CONTAINER}
+        - SOCKET_FILE=${SOCKET_FILE}
+        - SOCKET_PATH=${SOCKET_PATH}
+        - USER_ID=${USER_ID}
+        - GROUP_ID=${GROUP_ID}
+        - PY-AUTORELOAD=${PY-AUTORELOAD}
+  app2:
+      container_name: app2-container
+      hostname: app2
+      restart: always
+      build:
+        context: ./app
+        dockerfile: Dockerfile
+        args:
+          - PYTHON_VERSION=${PYTHON_VERSION}
+          - AUTHOR=${AUTHOR}
+          - CONTAINER_LOGFILE_PATH=${CONTAINER_LOGFILE_PATH}
+      volumes:
+        - socket_app2:${SOCKET_PATH} # Share the socket file for Nginx.
+        - ${APP_CODE_PATH_HOST}:${APP_CODE_PATH_CONTAINER}
+        - ${LOCAL_LOGFILE_PATH}:${CONTAINER_LOGFILE_PATH}
+      environment:
+        - NODE_NAME=${NODE_NAME2}
+        - CONTAINER_LOGFILE_PATH=${CONTAINER_LOGFILE_PATH}
+        - APP_CODE_PATH_CONTAINER=${APP_CODE_PATH_CONTAINER}
+        - SOCKET_FILE=${SOCKET_FILE}
+        - SOCKET_PATH=${SOCKET_PATH}
+        - USER_ID=${USER_ID}
+        - GROUP_ID=${GROUP_ID}
+        - PY-AUTORELOAD=${PY-AUTORELOAD}
+
+  loadbalancer:
+      container_name: loadbalancer-container
+      build:
+        context: ./loadbalancer
+        dockerfile: Dockerfile
+        args:
+          - AUTHOR=${AUTHOR}
+          - NGINX_VERSION=${NGINX_VERSION}
+      depends_on:
+          - app1
+          - app2
+      volumes:
+          # Load the socket file from volumes.
+          - socket_app1:/socket_app1
+          - socket_app2:/socket_app2
+          - ./server_logs:/var/log/nginx
+      ports:
+          - '18088:80'
+      environment:
+          - NGINX_UPSTREAM_CONTAINER=${NGINX_UPSTREAM_CONTAINER}
+          - SOCKET_FILE=${SOCKET_FILE}
+
+volumes:
+  socket_app1:
+  socket_app2:
